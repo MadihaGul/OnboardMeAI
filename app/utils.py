@@ -5,8 +5,15 @@ from typing import List, Optional
 
 def list_text_files(root: str, exts=None):
     if exts is None:
-        exts = {'.py', '.md', '.txt', '.json', '.yaml', '.yml', '.rst'}
-    for dirpath, _, filenames in os.walk(root):
+        exts = {
+            '.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte',
+            '.java', '.kt', '.kts', '.go', '.rs', '.rb', '.php', '.swift', '.scala',
+            '.c', '.cpp', '.cc', '.h', '.hpp', '.m', '.mm', '.dart', '.sh', '.bash',
+            '.ps1', '.sql', '.json', '.yaml', '.yml', '.md', '.txt', '.rst'
+        }
+    ignored_dirs = {'node_modules', '.git', '.venv', '__pycache__', 'dist', 'build', '.next', 'out', '.idea', '.vscode'}
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in ignored_dirs]
         for fn in filenames:
             _, e = os.path.splitext(fn)
             if e.lower() in exts:
@@ -38,13 +45,15 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> List[str
 def extract_imports(content: str) -> List[str]:
     imports = []
     patterns = [
-        r"import\s+[^'\"]+[\"']([^\"']+)[\"']",
-        r"import\([\"']([^\"']+)[\"']\)",
-        r"require\([\"']([^\"']+)[\"']\)",
-        r"export\s+[^'\"]+from\s+[\"']([^\"']+)[\"']",
+        r"import\s+(?:[^'\"]+\s+from\s+)?[\"']([^\"']+)[\"']",
+        r"import\(\s*[\"']([^\"']+)[\"']\s*\)",
+        r"require\(\s*[\"']([^\"']+)[\"']\s*\)",
+        r"export\s+[^'\"]+\s+from\s+[\"']([^\"']+)[\"']",
+        r"from\s+([^\s'\"]+)\s+import",
+        r"^import\s+([^\s'\"]+)",
     ]
     for pat in patterns:
-        for match in re.findall(pat, content):
+        for match in re.findall(pat, content, flags=re.MULTILINE):
             imports.append(match)
     return imports
 

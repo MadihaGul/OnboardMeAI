@@ -54,33 +54,41 @@ def ingest_repo(repo_url: str, repo_name: str, data_dir: str = './data') -> str:
             if name == 'package.json':
                 package_summary = summarize_package_json(content)
                 if package_summary:
-                    texts.append(package_summary)
+                    chunk_text_value = f"CONFIGURATION FILE: {rel}. Summary: {package_summary}"
+                    texts.append(chunk_text_value)
                     metadatas.append({
                         'path': rel,
                         'chunk': 0,
-                        'text': package_summary,
+                        'text': chunk_text_value,
                         'type': 'package_summary'
                     })
                 else:
                     for i, c in enumerate(chunk_text(content)):
-                        texts.append(c)
-                        metadatas.append({'path': rel, 'chunk': i, 'text': c})
+                        chunk_text_value = f"CONFIGURATION FILE: {rel}. {c}"
+                        texts.append(chunk_text_value)
+                        metadatas.append({'path': rel, 'chunk': i, 'text': chunk_text_value, 'type': 'doc_chunk'})
                 continue
 
             if name == 'package-lock.json' or name == 'package-lock':
                 summary = summarize_package_lock(content)
                 if summary:
-                    texts.append(summary)
+                    chunk_text_value = f"CONFIGURATION FILE: {rel}. Summary: {summary}"
+                    texts.append(chunk_text_value)
                     metadatas.append({
                         'path': rel,
                         'chunk': 0,
-                        'text': summary,
+                        'text': chunk_text_value,
                         'type': 'package_lock_summary'
                     })
                     continue
 
             ext = os.path.splitext(fp)[1].lower()
-            if ext in {'.js', '.jsx', '.ts', '.tsx', '.py'}:
+            code_extensions = {
+                '.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte',
+                '.java', '.kt', '.kts', '.go', '.rs', '.rb', '.php', '.swift', '.scala',
+                '.c', '.cpp', '.cc', '.h', '.hpp', '.m', '.mm', '.dart', '.sh', '.bash', '.ps1', '.sql'
+            }
+            if ext in code_extensions:
                 role = file_role_hint(rel, content)
                 if role:
                     texts.append(f"{rel}: {role}")
@@ -97,23 +105,37 @@ def ingest_repo(repo_url: str, repo_name: str, data_dir: str = './data') -> str:
                     target = os.path.relpath(resolved, repo_path) if resolved else imp
                     import_edges.append((rel, target))
 
-                preview = code_preview(content, max_lines=60)
-                texts.append(preview)
+                code_header = f"CODE FILE: {rel}. {role if role else 'Implementation source code.'}"
+                preview = code_preview(content, max_lines=80)
+                preview_text = f"{code_header}\n{preview}"
+                texts.append(preview_text)
                 metadatas.append({
                     'path': rel,
                     'chunk': 0,
-                    'text': preview,
+                    'text': preview_text,
                     'type': 'code_preview'
                 })
                 for i, c in enumerate(chunk_text(content, chunk_size=1200, overlap=200)):
-                    texts.append(c)
-                    metadatas.append({'path': rel, 'chunk': i + 1, 'text': c})
+                    chunk_text_value = f"{code_header}\n{c}"
+                    texts.append(chunk_text_value)
+                    metadatas.append({
+                        'path': rel,
+                        'chunk': i + 1,
+                        'text': chunk_text_value,
+                        'type': 'code_chunk'
+                    })
                 continue
 
             chunks = chunk_text(content)
             for i, c in enumerate(chunks):
-                texts.append(c)
-                metadatas.append({'path': rel, 'chunk': i, 'text': c})
+                chunk_text_value = f"DOCUMENTATION FILE: {rel}.\n{c}"
+                texts.append(chunk_text_value)
+                metadatas.append({
+                    'path': rel,
+                    'chunk': i,
+                    'text': chunk_text_value,
+                    'type': 'doc_chunk'
+                })
 
         arch_summary = build_architecture_summary(files, import_edges, package_summary, readme_excerpt)
         if arch_summary:

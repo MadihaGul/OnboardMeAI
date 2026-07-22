@@ -67,21 +67,32 @@ def query(req: QueryRequest):
     if not vs.load():
         raise HTTPException(status_code=404, detail="Repository not ingested yet. Call /ingest first")
 
-    results = vs.search(req.question, k=req.k)
+    raw_results = vs.search(req.question, k=req.k * 4)
+    code_results = [item for item in raw_results if item[0].get('type', '').startswith('code') or item[0].get('type') == 'file_role_hint' or item[0].get('type', '').endswith('_summary')]
+    doc_results = [item for item in raw_results if item not in code_results]
+    results = (code_results + doc_results)[:req.k]
+
     context_texts = []
     for md, dist in results:
-        context_texts.append(f"Path: {md.get('path')}\nChunk: {md.get('chunk')}\n---\n{md.get('text','')}\n")
+        context_texts.append(
+            f"Path: {md.get('path')}\nType: {md.get('type', 'unknown')}\nChunk: {md.get('chunk')}\n---\n{md.get('text','')}\n"
+        )
 
     prompt = (
-        "You are a developer assistant specialized in explaining repository architecture, file responsibilities, and code relationships. "
-        "Use the context below to answer the question precisely, and mention source file paths when relevant.\n\n"
+        "You are a developer assistant specialized in codebase architecture and implementation details. Use only the provided context to answer. "
+        "Prioritize implementation source code evidence, code previews, code chunk contents, file role hints, and architecture summaries. "
+        "If you need to use README, docs, or config files, explicitly label those references as documentation-based and only use them when direct code evidence is missing. "
+        "Do not hallucinate project structure or implementation details beyond what the context supports.\n\n"
         "Context:\n" + "\n".join(context_texts) + "\nQuestion: " + req.question
     )
 
     try:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role":"user","content":prompt}],
+            messages=[
+                {"role": "system", "content": "You are a developer assistant specialized in codebase architecture and implementation details."},
+                {"role":"user","content":prompt}
+            ],
             max_tokens=600
         )
         # Try multiple access patterns for the response
