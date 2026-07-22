@@ -73,7 +73,8 @@ def query(req: QueryRequest):
         context_texts.append(f"Path: {md.get('path')}\nChunk: {md.get('chunk')}\n---\n{md.get('text','')}\n")
 
     prompt = (
-        "You are a helpful developer assistant. Use the following repository context to answer the question.\n\n" +
+        "You are a developer assistant specialized in explaining repository architecture, file responsibilities, and code relationships. "
+        "Use the context below to answer the question precisely, and mention source file paths when relevant.\n\n"
         "Context:\n" + "\n".join(context_texts) + "\nQuestion: " + req.question
     )
 
