@@ -1,4 +1,4 @@
-# OnboardMeAI — Repo Chat Helper
+# OnboardMeAI — Understand Repo with AI chat
 
 Lightweight FastAPI service to ingest a GitHub repo and answer developer questions using RAG.
 
@@ -37,7 +37,6 @@ curl -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -
 Notes & next steps
 
 - FAISS and sentence-transformers may need platform-specific wheels on Windows. If `faiss-cpu` fails to install, consider using Linux or WSL.
-- This project is a starting point: you can add richer context extraction (code parsing), caching, auth, or a simple web chat UI.
 
 Frontend
 
