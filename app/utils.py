@@ -6,7 +6,7 @@ from typing import List, Optional
 def list_text_files(root: str, exts=None):
     if exts is None:
         exts = {
-            '.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte',
+            '.cs','.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte',
             '.java', '.kt', '.kts', '.go', '.rs', '.rb', '.php', '.swift', '.scala',
             '.c', '.cpp', '.cc', '.h', '.hpp', '.m', '.mm', '.dart', '.sh', '.bash',
             '.ps1', '.sql', '.json', '.yaml', '.yml', '.md', '.txt', '.rst'
