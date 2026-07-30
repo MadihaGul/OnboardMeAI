@@ -12,7 +12,14 @@ source .venv/bin/activate   # or .\.venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
-2. Copy `.env.example` to `.env` and set `OPENAI_API_KEY`.
+2. Copy `.env.example` to `.env` and set `GOOGLE_API_KEY` or `GEMINI_API_KEY`.
+
+   To get a free Gemini API key:
+   - Sign in at https://aistudio.google.com/app/apikey
+   - Create a new API key in Google AI Studio
+   - Copy the key into your `.env` file as `GOOGLE_API_KEY=...`
+   - If you are using the free-tier Gemini access, keep the key in local development only and avoid committing it to git
+   - Optional: set `GEMINI_MODEL=gemini-3.6-flash` in `.env` if you want the recommended standard text-generation model
 
 3. Run the app:
 

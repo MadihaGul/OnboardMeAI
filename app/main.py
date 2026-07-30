@@ -4,27 +4,27 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from openai import OpenAI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.ingest import ingest_repo
 from app.vectorstore import VectorStore
-from fastapi.middleware.cors import CORSMiddleware
+from app.llm import get_llm_provider
 
 load_dotenv()
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
 DATA_DIR = os.getenv('DATA_DIR', './data')
-client = None
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-else:
-    client = OpenAI()
+
+try:
+    llm_provider = get_llm_provider()
+except ValueError:
+    llm_provider = None
 
 app = FastAPI(title="OnboardMeAI - Repo Chat Helper")
 
-# Allow localhost frontends (Vite:5173, CRA:3000)
+# Allow localhost frontends (Vite:5173, Vite:5175, CRA:3000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5175", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,8 +59,8 @@ def status():
 
 @app.post('/query')
 def query(req: QueryRequest):
-    if not OPENAI_API_KEY:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
+    if llm_provider is None:
+        raise HTTPException(status_code=500, detail="GOOGLE_API_KEY or GEMINI_API_KEY not set")
     name = repo_name_from_url(req.repo_url)
     vs_path = os.path.join(DATA_DIR, name)
     vs = VectorStore(vs_path)
@@ -87,22 +87,7 @@ def query(req: QueryRequest):
     )
 
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a developer assistant specialized in codebase architecture and implementation details."},
-                {"role":"user","content":prompt}
-            ],
-            max_tokens=600
-        )
-        # Try multiple access patterns for the response
-        try:
-            answer = resp['choices'][0]['message']['content']
-        except Exception:
-            try:
-                answer = resp.choices[0].message.content
-            except Exception:
-                answer = str(resp)
+        answer = llm_provider.generate_response(prompt)
         return {"answer": answer, "sources": [r[0] for r in results]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI error: {e}")
+        raise HTTPException(status_code=500, detail=f"Gemini error: {e}")
